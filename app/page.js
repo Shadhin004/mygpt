@@ -26,6 +26,7 @@ const fetchMessages = async (conversation_id) => {
   const res = await fetch(`/api/messages?conversation_id=${conversation_id}`);
   const data = await res.json();
   setMessages(data);
+  setIsLoading(false);
 };
 
   useEffect(() => {
@@ -51,7 +52,8 @@ const fetchMessages = async (conversation_id) => {
     .then(data => {
       if (data.success) {
         // update UI sidebar
-        updateConversationTitle(currentId, data.title);
+        const updatedString = data.title.replace(/"/g, "");
+        updateConversationTitle(currentId, updatedString);
       }
     });
   }
@@ -92,8 +94,8 @@ const handleSend = async ({text, file}) => {
     method: "POST",
     body: formData
   });
-  const data = await res.json().finally(() => setIsLoading(false));
-console.log(data)
+  const data = await res.json();
+  
   // Use returned conversation_id
   fetchMessages(data.conversation_id);
 };
@@ -145,7 +147,6 @@ console.log(data)
       <div className="flex-1 flex flex-col">
         <ChatWindow messages={messages} isLoading={isLoading} />
         <InputBox onSend={handleSend} text={text} setText={setText} onUpload={handleUpload} />
-        {/* <AdvanceInput onSend={handleSend} /> */}
       </div>
     </div>
   );

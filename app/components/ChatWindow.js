@@ -3,7 +3,7 @@ import 'react-loading-skeleton/dist/skeleton.css';
 
 export default function ChatWindow({ messages, isLoading }) {
   return (
-    <div className="flex-1 overflow-y-auto bg-[#343541] text-white p-4 space-y-4 rounded-lg shadow-inner">
+    <div className="flex-1 overflow-y-auto bg-gray-900 text-white p-4 space-y-4 rounded-lg shadow-inner m-2">
       {messages.map((m, i) => (
         <div
           key={i}

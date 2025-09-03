@@ -51,7 +51,7 @@ export async function POST(req) {
 
     // Call OpenAI
     const apiResponse = await openai.chat.completions.create({
-      model: "gpt-4o-mini", // or your preferred model
+      model: "gpt-5-mini", // or your preferred model
       messages,
     });
 
