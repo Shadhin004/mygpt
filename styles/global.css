@@ -10,3 +10,7 @@
   background: #444;
   border-radius: 4px;
 }
+
+* {
+font-family: Verdana !important;
+}

@@ -1,4 +1,7 @@
-export default function ChatWindow({ messages }) {
+import Skeleton from "react-loading-skeleton";
+import 'react-loading-skeleton/dist/skeleton.css';
+
+export default function ChatWindow({ messages, isLoading }) {
   return (
     <div className="flex-1 overflow-y-auto bg-[#343541] text-white p-4 space-y-4 rounded-lg shadow-inner">
       {messages.map((m, i) => (
@@ -19,6 +22,7 @@ export default function ChatWindow({ messages }) {
           </div>
         </div>
       ))}
+      {isLoading && <Skeleton height={100} width={"50%"} /> }
     </div>
   );
 }

@@ -1,40 +1,67 @@
 import { NextResponse } from "next/server";
 import { addMessage, getMessages, getOrCreateConversation } from "@/lib/db";
 import OpenAI from "openai";
+import fs from "fs";
+import path from "path";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export async function POST(req) {
   try {
-    const body = await req.json();
-    const { userMessage } = body;
+    const formData = await req.formData();
+    const text = formData.get("text") || "";
+    const file = formData.get("file");
+    let conversation_id = formData.get("conversation_id");
 
-    // Always make sure a conversation exists
-    const conversation_id = await getOrCreateConversation();
+    // Ensure conversation exists
+    const conversationId = conversation_id || (await getOrCreateConversation());
 
-    // Store user message
-    await addMessage(conversation_id, "user", userMessage);
+    // Handle file upload
+    let imageUrl = null;
+    if (file) {
+      const buffer = Buffer.from(await file.arrayBuffer());
 
-    // Fetch history
-    const history = await getMessages(conversation_id);
+      // Save to /public/uploads
+      const uploadsDir = path.join(process.cwd(), "public", "uploads");
+      if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 
+      const filename = `${Date.now()}-${file.name}`;
+      const filepath = path.join(uploadsDir, filename);
+      fs.writeFileSync(filepath, buffer);
+
+      // Store only the URL in DB
+      imageUrl = `/uploads/${filename}`;
+    }
+
+    // Save user message (text + optional image URL)
+    await addMessage(conversationId, "user", text, imageUrl);
+
+    // Fetch full conversation history
+    const history = await getMessages(conversationId);
+
+    // Prepare messages for OpenAI
     const messages = [
-      { role: "system", content: "You are a helpful assistant." },
-      ...history.map((m) => ({ role: m.role, content: m.text })),
+      { role: "system", content: "Analyse the image." },
+      ...history.map((m) => {
+        let content = m.text || "";
+        if (m.image_url) content += `\n[Image: ${m.image_url}]`; // placeholder for GPT
+        return { role: m.role, content };
+      }),
     ];
 
-    // GPT-5 response
+    // Call OpenAI
     const apiResponse = await openai.chat.completions.create({
-      model: "gpt-5",
+      model: "gpt-4o-mini", // or your preferred model
       messages,
     });
 
     const gptMessage = apiResponse.choices[0].message.content;
-    const outputTokens = apiResponse.usage.output_tokens;
+    const outputTokens = apiResponse.usage?.output_tokens || 0;
 
-    await addMessage(conversation_id, "assistant", gptMessage, null, outputTokens);
+    // Save assistant reply
+    await addMessage(conversationId, "assistant", gptMessage, null, outputTokens);
 
-    return NextResponse.json({ message: gptMessage, conversation_id });
+    return NextResponse.json({ message: gptMessage, conversation_id: conversationId });
   } catch (err) {
     console.error("Chat API Error:", err);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
